@@ -1,7 +1,7 @@
 import time
 from tkinter import *
 
-from Elevator import Elevator, RTScheduler, RRScheduler
+from Elevator import Elevator, ExpressScheduler, MinMaxScheduler
 
 canvas_width = 800
 canvas_height = 600
@@ -17,11 +17,11 @@ tick_remainder = 0
 def tick():
     global speed, tick_remainder
     tick_remainder += speed
-    while tick_remainder >= 10:
+    while tick_remainder >= 1.0:
         canvas.delete("all")
         elevator.tick()
         canvas_draw()
-        tick_remainder -= 10
+        tick_remainder -= 1.0
 
 def canvas_draw():
     pass
@@ -91,9 +91,9 @@ def window_event2():
 
 def scheduler_change():
     if express_var.get() == 1:
-        elevator.scheduler = RTScheduler()
+        elevator.scheduler = ExpressScheduler()
     else:
-        elevator.scheduler = RRScheduler()
+        elevator.scheduler = MinMaxScheduler()
 
 def p_change(new_p):
     elevator.p = float(new_p) / 100.0 * (1/10)
@@ -105,14 +105,14 @@ def spped_change(new_speed):
 def reset_elevator():
     global elevator
     p = elevator.p
-    elevator = Elevator(scheduler=RTScheduler() if express_var.get() == 1 else RRScheduler(),
+    elevator = Elevator(scheduler=ExpressScheduler() if express_var.get() == 1 else MinMaxScheduler(),
                         floors=floors,
                         p=p, capacity=2, initial_count=5)
 
 
 if __name__ == '__main__':
 
-    elevator = Elevator(scheduler=RRScheduler(), floors=floors, p=1 / 20, capacity=2, initial_count=5)
+    elevator = Elevator(scheduler=MinMaxScheduler(), floors=floors, p=1 / 20, capacity=2, initial_count=5)
     master = Tk()
     master.resizable = False
     master.title("Elevator")
@@ -149,5 +149,5 @@ if __name__ == '__main__':
     while run_flag:
         tick()
         master.update()
-        time.sleep(0.001)
+        time.sleep(0.01)
     master.destroy()

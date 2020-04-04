@@ -138,6 +138,6 @@ class Elevator:
 
 
 if __name__ == '__main__':
-    elevator = Elevator(scheduler=RTScheduler(), floors=7, p = 1 / 20, capacity=2, initial_count= 10)
+    elevator = Elevator(scheduler=ExpressScheduler(), floors=7, p =1 / 20, capacity=2, initial_count= 10)
     for t in range(7200):
         elevator.tick()

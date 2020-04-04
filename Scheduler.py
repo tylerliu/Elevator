@@ -3,7 +3,7 @@ class Scheduler:
     def next_floor(self, requests, full):
         return 0
 
-class RRScheduler(Scheduler):
+class MinMaxScheduler(Scheduler):
 
     def __init__(self):
         self.current = 0
@@ -21,7 +21,7 @@ class RRScheduler(Scheduler):
                     break
         return self.current
 
-class RTScheduler(Scheduler):
+class ExpressScheduler(Scheduler):
     def __init__(self):
         self.current = 0
         self.next = 0
@@ -35,7 +35,7 @@ class RTScheduler(Scheduler):
         return self.current
 
 
-class RTRScheduler(Scheduler):
+class ReverseExpressScheduler(Scheduler):
     def __init__(self):
         self.current = 0
         self.next = 0
