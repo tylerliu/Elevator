@@ -10,12 +10,18 @@ cart_image = None
 run_flag = True
 master = None
 floors = 7
+express_var = None
+speed = 10
+tick_remainder = 0
 
 def tick():
-    canvas.delete("all")
-    elevator.tick()
-    canvas_draw()
-    # canvas.after(50, tick)
+    global speed, tick_remainder
+    tick_remainder += speed
+    while tick_remainder >= 10:
+        canvas.delete("all")
+        elevator.tick()
+        canvas_draw()
+        tick_remainder -= 10
 
 def canvas_draw():
     pass
@@ -83,10 +89,26 @@ def window_event(event):
 def window_event2():
     master.destroy()
 
+def scheduler_change():
+    elevator.reset_stat()
+    if express_var.get() == 1:
+        elevator.scheduler = RTScheduler()
+    else:
+        elevator.scheduler = RRScheduler()
+
+def p_change(new_p):
+    elevator.p = float(new_p) / 100.0 * (1/10)
+
+def spped_change(new_speed):
+    global speed
+    speed = float(2.0 ** (int(new_speed) / 10)) - 1
+
+
 if __name__ == '__main__':
 
-    elevator = Elevator(scheduler=RTScheduler(), floors=floors, p=1 / 20, capacity=2, initial_count=5)
+    elevator = Elevator(scheduler=RRScheduler(), floors=floors, p=1 / 20, capacity=2, initial_count=5)
     master = Tk()
+    master.resizable = False
     master.title("Elevator")
     master.bind("<Configure>", window_event)
     master.protocol("WM_DELETE_WINDOW", window_event2)
@@ -96,8 +118,28 @@ if __name__ == '__main__':
                height=canvas_height)
     canvas.pack(expand=YES, fill=BOTH)
 
+    express_var = IntVar()
+    p_var = IntVar()
+
+    button = Checkbutton(master, text="Express Schedule", fg='black',
+                         command=scheduler_change, variable=express_var)
+    button.pack(side=LEFT)
+    label1 = Label(master, text='  Busyness: ')
+    label1.pack(side=LEFT)
+    scale1 = Scale(master, from_=0, to_=100, orient=HORIZONTAL, length=200,
+                   command=p_change)
+    scale1.set(40)
+    scale1.pack(side=LEFT, expand=True)
+    label2 = Label(master, text='  Simulation Speed: ')
+    label2.pack(side=LEFT)
+    scale2 = Scale(master, from_=0, to_=100, orient=HORIZONTAL, length=200,
+                   command=spped_change)
+    scale2.pack(side=LEFT, expand=True)
+    scale2.set(10)
+
+
     while run_flag:
         tick()
         master.update()
-        time.sleep(0.01)
+        time.sleep(0.001)
     master.destroy()

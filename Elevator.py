@@ -37,6 +37,7 @@ class PassengerLogger():
         self.passengers = []
 
     def load_passenger(self, queue : ElevatorQueue, floor):
+        if len(self.passengers) == self.capacity: return False
         passenger = queue.pop_request(floor)
         if passenger != -1:
             self.passengers.append(passenger)
@@ -67,6 +68,9 @@ class PassengerLogger():
         string += "\nTurnaround time %d s for %d arrived carts" % (self.total_wait / self.arrived_count if self.arrived_count != 0 else 0, self.arrived_count)
         return string
 
+    def reset_stat(self):
+        self.arrived_count = 0
+        self.total_wait = 0
 
 class Elevator:
     LOADING_TIME = 4
@@ -100,7 +104,7 @@ class Elevator:
                 self.step_to = self.step_from
                 self.step_left = Elevator.LOADING_TIME
 
-        self.print_debug()
+        # self.print_debug()
         self.time += 1
 
     def add_request(self, floor):
@@ -128,6 +132,9 @@ class Elevator:
                 (self.step_time(self.step_from, self.step_to) - 2 * Elevator.START_STOP_TIME)
         return min(max(ans, 0), 1)
 
+    def reset_stat(self):
+        self.time = 0
+        self.passengerLogger.reset_stat()
 
 
 if __name__ == '__main__':
