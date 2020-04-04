@@ -14,6 +14,9 @@ class ElevatorQueue():
     def pop_request(self, floor):
         return self.waits[floor].get_nowait() if not self.waits[floor].empty() else -1
 
+    def add_request(self, time, floor):
+        self.waits[floor].put(time)
+
     # p: chance of changing per second in all floors
     def waiting(self, time, p):
             p2 = (p if isinstance(p, float) else p[t - time]) / len(self.waits)
@@ -57,12 +60,17 @@ class PassengerLogger():
     def print_debug(self, time):
         print("Elevator has", len(self.passengers), "Carts")
         print("%d arrived, throughput %f / hr" % (self.arrived_count, self.arrived_count / time * 3600 if time != 0 else float('nan')))
-        print("Total wait %d s, Turnaround time %f s" %(self.total_wait, self.total_wait / self.arrived_count if self.arrived_count != 0 else float('nan')))
+        print("Total wait %d s, Turnaround time %f s" %(self.total_wait, self.total_wait / self.arrived_count if self.arrived_count != 0 else 0))
 
+    def get_string(self, time):
+        string = "Throughput %d / hr in %d seconds" % (self.arrived_count / time * 3600 if time != 0 else float('nan'), time)
+        string += "\nTurnaround time %d s for %d arrived carts" % (self.total_wait / self.arrived_count if self.arrived_count != 0 else 0, self.arrived_count)
+        return string
 
 
 class Elevator:
-    LOADING_TIME = 2
+    LOADING_TIME = 4
+    START_STOP_TIME = 4
 
     def __init__(self, scheduler, floors, p, capacity, initial_count = 0):
         self.queue = ElevatorQueue(floors, initial_count)
@@ -95,6 +103,9 @@ class Elevator:
         self.print_debug()
         self.time += 1
 
+    def add_request(self, floor):
+        self.queue.add_request(self.time, floor)
+
 
     def print_debug(self):
         print("Time: ", self.time)
@@ -102,14 +113,24 @@ class Elevator:
         print("Elevator going from %d to %d, arrive in %d seconds" % (self.step_from, self.step_to, self.step_left))
         self.queue.print_debug()
 
+    def __str__(self):
+        return self.passengerLogger.get_string(self.time)
 
     @staticmethod
     def step_time(floor_from, floor_to):
-        if floor_from == floor_to: return 0
-        return int(3 + 8 + 2.25 * abs(floor_to - floor_from))
+        if floor_from == floor_to: return Elevator.LOADING_TIME
+        return int(2 * Elevator.START_STOP_TIME + 2.25 * abs(floor_to - floor_from))
+
+    def calc_location(self):
+        if self.step_from == self.step_to:
+            return self.step_to
+        ans = (self.step_left - Elevator.START_STOP_TIME) / \
+                (self.step_time(self.step_from, self.step_to) - 2 * Elevator.START_STOP_TIME)
+        return min(max(ans, 0), 1)
+
 
 
 if __name__ == '__main__':
-    elevator = Elevator(scheduler=RRScheduler(), floors=7, p = 1 / 20, capacity=2, initial_count= 10)
-    for t in range(3600):
+    elevator = Elevator(scheduler=RTScheduler(), floors=7, p = 1 / 20, capacity=2, initial_count= 10)
+    for t in range(7200):
         elevator.tick()
