@@ -90,7 +90,6 @@ def window_event2():
     master.destroy()
 
 def scheduler_change():
-    elevator.reset_stat()
     if express_var.get() == 1:
         elevator.scheduler = RTScheduler()
     else:
@@ -101,7 +100,14 @@ def p_change(new_p):
 
 def spped_change(new_speed):
     global speed
-    speed = float(2.0 ** (int(new_speed) / 10)) - 1
+    speed = float(2.0 ** (int(new_speed) / 11)) - 1
+
+def reset_elevator():
+    global elevator
+    p = elevator.p
+    elevator = Elevator(scheduler=RTScheduler() if express_var.get() == 1 else RRScheduler(),
+                        floors=floors,
+                        p=p, capacity=2, initial_count=5)
 
 
 if __name__ == '__main__':
@@ -119,7 +125,10 @@ if __name__ == '__main__':
     canvas.pack(expand=YES, fill=BOTH)
 
     express_var = IntVar()
-    p_var = IntVar()
+
+    button0 = Button(master, text="Reset", fg='black',
+                         command=reset_elevator)
+    button0.pack(side=LEFT)
 
     button = Checkbutton(master, text="Express Schedule", fg='black',
                          command=scheduler_change, variable=express_var)
@@ -136,7 +145,6 @@ if __name__ == '__main__':
                    command=spped_change)
     scale2.pack(side=LEFT, expand=True)
     scale2.set(10)
-
 
     while run_flag:
         tick()
