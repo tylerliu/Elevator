@@ -11,6 +11,7 @@ run_flag = True
 master = None
 floors = 7
 express_var = None
+pressing_var = None
 speed = 10
 tick_remainder = 0
 
@@ -58,16 +59,21 @@ def draw_queue():
     for i in range(1, floors):
         canvas.create_line(0.15 * canvas_width + 50, height_per_floor * i, 0.9 * canvas_width, height_per_floor * i)
 
-    for f, wait_count in enumerate(map(lambda f: f.qsize(), elevator.queue.waits)):
+    for f, wait_count in enumerate(elevator.queue.request_count()):
 
         loc = floors - (f + 0.5)
         loc = loc * height_per_floor
+
+        indic_text = ("▲" if elevator.queue.up_request[f] else "") + "\n" + ("▼" if elevator.queue.down_request[f] else "")
+        canvas.create_text(0.15 * canvas_width + 50 + 10 + 10, loc, text=indic_text,
+                           font=("Purisa", 26), justify=CENTER, fill='green')
+
         for i in range(wait_count):
-            if 0.15 * canvas_width + 50 + 10 + 50 * i > 0.8 * canvas_width:
-                canvas.create_text(0.15 * canvas_width + 50 + 10 + 50 * i, loc, text='   ...',
+            if 0.15 * canvas_width + 50 + 10 + 20 + 50 * i > 0.8 * canvas_width:
+                canvas.create_text(0.15 * canvas_width + 50 + 10 + 20 + 50 * i, loc, text='   ...',
                            font=("Purisa", 40), justify=LEFT)
                 break
-            add_cart(0.15 * canvas_width + 50 + 10 + 50 * i, loc - 15)
+            add_cart(0.15 * canvas_width + 50 + 10 + 20 + 50 * i, loc - 15)
         if f != 0:
             canvas.create_text(0.95 * canvas_width, loc, text=str(wait_count) + "\nWait",
                                font=("Purisa", 26), justify=CENTER)
@@ -95,6 +101,12 @@ def scheduler_change():
     else:
         elevator.scheduler = MinMaxScheduler()
 
+def pressing_change():
+    if pressing_var.get() == 1:
+        elevator.queue.pressing_up = True
+    else:
+        elevator.queue.pressing_up = False
+
 def p_change(new_p):
     elevator.p = float(new_p) / 100.0 * (1/10)
 
@@ -107,12 +119,12 @@ def reset_elevator():
     p = elevator.p
     elevator = Elevator(scheduler=ExpressScheduler() if express_var.get() == 1 else MinMaxScheduler(),
                         floors=floors,
-                        p=p, capacity=2, initial_count=5)
+                        p=p, capacity=2, initial_count=0, pressing_up=(pressing_var.get()==1))
 
 
 if __name__ == '__main__':
 
-    elevator = Elevator(scheduler=MinMaxScheduler(), floors=floors, p=1 / 20, capacity=2, initial_count=5)
+    elevator = Elevator(scheduler=MinMaxScheduler(), floors=floors, p=1 / 20, capacity=2, initial_count=0)
     master = Tk()
     master.resizable = False
     master.title("Elevator")
@@ -125,6 +137,7 @@ if __name__ == '__main__':
     canvas.pack(expand=YES, fill=BOTH)
 
     express_var = IntVar()
+    pressing_var = IntVar()
 
     button0 = Button(master, text="Reset", fg='black',
                          command=reset_elevator)
@@ -133,6 +146,9 @@ if __name__ == '__main__':
     button = Checkbutton(master, text="Express Schedule", fg='black',
                          command=scheduler_change, variable=express_var)
     button.pack(side=LEFT)
+    button2 = Checkbutton(master, text="Pressing ▲", fg='black',
+                         command=pressing_change, variable=pressing_var)
+    button2.pack(side=LEFT)
     label1 = Label(master, text='  Busyness: ')
     label1.pack(side=LEFT)
     scale1 = Scale(master, from_=0, to_=100, orient=HORIZONTAL, length=200,

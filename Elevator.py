@@ -1,17 +1,36 @@
 from queue import PriorityQueue
 from numpy import random
 from Scheduler import *
+from collections.abc import Iterable
 
 class ElevatorQueue():
-    def __init__(self, floors, initial_count = 0):
+    def __init__(self, floors, initial_count = 0, pressing_up = False):
         self.waits = [PriorityQueue() for _ in range(floors)]
         for i in self.waits[1:]:
             for _ in range(initial_count): i.put(0)
+        self.up_request = [False for _ in range(floors)]
+        self.down_request = [False for _ in range(floors)]
+        self.pressing_up = pressing_up
 
-    def get_request(self):
-        return [not f.empty() for f in self.waits]
+    def get_down_request(self):
+        for i in range(len(self.down_request)):
+            self.down_request[i] = self.down_request[i] or (not self.waits[i].empty())
+        return self.down_request
 
-    def pop_request(self, floor):
+    def get_up_request(self):
+        if self.pressing_up:
+            for i in range(len(self.up_request)):
+                self.up_request[i] = self.up_request[i] or self.waits[i].qsize() > 5
+        return self.up_request
+
+    def request_count(self):
+        return list(map(lambda f: f.qsize(), self.waits))
+
+    def pop_request(self, floor, going_up):
+        if going_up:
+            self.up_request[floor] = False
+        else:
+            self.down_request[floor] = False
         return self.waits[floor].get_nowait() if not self.waits[floor].empty() else -1
 
     def add_request(self, time, floor):
@@ -19,26 +38,30 @@ class ElevatorQueue():
 
     # p: chance of changing per second in all floors
     def waiting(self, time, p):
-            p2 = (p if isinstance(p, float) else p[t - time]) / len(self.waits)
+            p2 = (p[t - time] if isinstance(p, Iterable) else p) / len(self.waits)
             result = random.choice([True, False], len(self.waits) - 1, replace=True, p = [p2, 1-p2])
             for f, adding in zip(self.waits[1:], result):
                 if adding:
                     f.put(time)
 
     def print_debug(self):
-        print("Requests: " + " ".join(map(lambda f: str(f.qsize()), self.waits)))
+        print("Longest_queues: " + str(max(map(lambda f: f.qsize(), self.waits))))
+
+    def get_stats(self):
+        return {"Longest_queue": max(map(lambda f: f.qsize(), self.waits))}
 
 class PassengerLogger():
 
-    def __init__(self, capacity):
+    def __init__(self, capacity, elevator):
         self.capacity = capacity
         self.arrived_count = 0
         self.total_wait = 0
         self.passengers = []
+        self.elevator = elevator
 
     def load_passenger(self, queue : ElevatorQueue, floor):
         if len(self.passengers) == self.capacity: return False
-        passenger = queue.pop_request(floor)
+        passenger = queue.pop_request(floor, self.elevator.scheduler.going_up())
         if passenger != -1:
             self.passengers.append(passenger)
         return passenger != -1
@@ -55,18 +78,22 @@ class PassengerLogger():
     def is_ready(self, queue, floor):
         if floor == 0:
             return len(self.passengers) == 0
-        if len(self.passengers) == self.capacity or queue.get_request()[floor] == False:
+        if len(self.passengers) == self.capacity or queue.request_count()[floor] == 0:
             return True
 
-    def print_debug(self, time):
+    def print_debug(self, time, queue : ElevatorQueue):
         print("Elevator has", len(self.passengers), "Carts")
-        print("%d arrived, throughput %f / hr" % (self.arrived_count, self.arrived_count / time * 3600 if time != 0 else float('nan')))
-        print("Total wait %d s, Turnaround time %f s" %(self.total_wait, self.total_wait / self.arrived_count if self.arrived_count != 0 else 0))
+        print("%d out of %d arrived, throughput %f / hr" % (self.arrived_count, self.arrived_count + sum(queue.request_count()), self.arrived_count / time * 3600 if time != 0 else float('nan')))
+        print("Turnaround time %f s" %(self.total_wait / self.arrived_count if self.arrived_count != 0 else 0))
 
     def get_string(self, time):
         string = "Throughput %d / hr in %d seconds" % (self.arrived_count / time * 3600 if time != 0 else float('nan'), time)
         string += "\nTurnaround time %d s for %d arrived carts" % (self.total_wait / self.arrived_count if self.arrived_count != 0 else 0, self.arrived_count)
         return string
+
+    def get_stats(self, time):
+        return {"Throughput": self.arrived_count / time * 3600 if time != 0 else float('nan'),
+                "Turnaround": self.total_wait / self.arrived_count if self.arrived_count != 0 else 0}
 
     def reset_stat(self):
         self.arrived_count = 0
@@ -76,13 +103,13 @@ class Elevator:
     LOADING_TIME = 4
     START_STOP_TIME = 4
 
-    def __init__(self, scheduler, floors, p, capacity, initial_count = 0):
-        self.queue = ElevatorQueue(floors, initial_count)
+    def __init__(self, scheduler, floors, p, capacity, initial_count = 0, pressing_up = False):
+        self.queue = ElevatorQueue(floors, initial_count, pressing_up=pressing_up)
         self.scheduler = scheduler
         self.p = p
         self.time = 0
         self.step_left, self.step_from, self.step_to = 0, 0, 0
-        self.passengerLogger = PassengerLogger(capacity)
+        self.passengerLogger = PassengerLogger(capacity, self)
 
 
     def tick(self):
@@ -98,7 +125,7 @@ class Elevator:
 
             self.step_from = self.step_to
             if self.passengerLogger.is_ready(self.queue, self.step_from):
-                self.step_to = self.scheduler.next_floor(self.queue.get_request(), self.passengerLogger.fullness())
+                self.step_to = self.scheduler.next_floor(self.queue.get_up_request(), self.queue.get_down_request(), self.passengerLogger.fullness())
                 self.step_left = self.step_time(self.step_from, self.step_to)
             else:
                 self.step_to = self.step_from
@@ -113,7 +140,7 @@ class Elevator:
 
     def print_debug(self):
         print("Time: ", self.time)
-        self.passengerLogger.print_debug(self.time)
+        self.passengerLogger.print_debug(self.time, self.queue)
         print("Elevator going from %d to %d, arrive in %d seconds" % (self.step_from, self.step_to, self.step_left))
         self.queue.print_debug()
 
@@ -122,7 +149,7 @@ class Elevator:
 
     @staticmethod
     def step_time(floor_from, floor_to):
-        if floor_from == floor_to: return Elevator.LOADING_TIME
+        if floor_from == floor_to: return 1
         return int(2 * Elevator.START_STOP_TIME + 2.25 * abs(floor_to - floor_from))
 
     def calc_location(self):
@@ -132,12 +159,18 @@ class Elevator:
                 (self.step_time(self.step_from, self.step_to) - 2 * Elevator.START_STOP_TIME)
         return min(max(ans, 0), 1)
 
+    def get_stat(self):
+        stats = self.queue.get_stats()
+        stats.update(self.passengerLogger.get_stats(self.time))
+        return stats
+
     def reset_stat(self):
         self.time = 0
         self.passengerLogger.reset_stat()
 
 
 if __name__ == '__main__':
-    elevator = Elevator(scheduler=ExpressScheduler(), floors=7, p =1 / 20, capacity=2, initial_count= 10)
+    elevator = Elevator(scheduler=ExpressScheduler(), floors=7, p =0.4/10, capacity=2, initial_count=0)
     for t in range(7200):
         elevator.tick()
+    elevator.print_debug()
