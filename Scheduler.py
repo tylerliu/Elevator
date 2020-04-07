@@ -71,6 +71,23 @@ class ExpressScheduler(Scheduler):
         return self.current == 0
 
 
+class DynamicExpressScheduler(Scheduler):
+    def __init__(self):
+        self.current = 0
+        self.next = 0
+
+    def next_floor(self, up_requests, down_requests, full):
+        if self.current != 0 and full > 0.9:
+            self.current = 0
+            return 0
+        self.current = self.next + 1
+        self.next = (self.next + 1) % (len(down_requests) - 1)
+        return self.current
+
+    def going_up(self):
+        return self.current == 0
+
+
 class ReverseExpressScheduler(Scheduler):
     def __init__(self):
         self.current = 0

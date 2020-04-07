@@ -1,7 +1,8 @@
 import time
 from tkinter import *
 
-from Elevator import Elevator, ExpressScheduler, MinMaxScheduler
+from Elevator import Elevator
+from Scheduler import DynamicExpressScheduler, ExpressScheduler, MinMaxScheduler
 
 canvas_width = 800
 canvas_height = 600
@@ -10,7 +11,9 @@ cart_image = None
 run_flag = True
 master = None
 floors = 7
-express_var = None
+schedule_list = {'Normal Scheduler': MinMaxScheduler, 'Express Scheduler': ExpressScheduler, 'Dynamic Express': DynamicExpressScheduler}
+schedule_var = None
+pressing_list = {'No pressing ▲': 'none', 'always pressing ▲': 'always', 'press ▲ when full': 'when_full'}
 pressing_var = None
 speed = 10
 tick_remainder = 0
@@ -95,17 +98,11 @@ def window_event(event):
 def window_event2():
     master.destroy()
 
-def scheduler_change():
-    if express_var.get() == 1:
-        elevator.scheduler = ExpressScheduler()
-    else:
-        elevator.scheduler = MinMaxScheduler()
+def scheduler_change(*args):
+    elevator.scheduler = schedule_list[schedule_var.get()]()
 
-def pressing_change():
-    if pressing_var.get() == 1:
-        elevator.queue.pressing_up = True
-    else:
-        elevator.queue.pressing_up = False
+def pressing_change(*args):
+    elevator.queue.pressing_up = pressing_list[pressing_var.get()]
 
 def p_change(new_p):
     elevator.p = float(new_p) / 100.0 * (1/10)
@@ -117,9 +114,9 @@ def spped_change(new_speed):
 def reset_elevator():
     global elevator
     p = elevator.p
-    elevator = Elevator(scheduler=ExpressScheduler() if express_var.get() == 1 else MinMaxScheduler(),
+    elevator = Elevator(scheduler=schedule_list[schedule_var.get()](),
                         floors=floors,
-                        p=p, capacity=2, initial_count=0, pressing_up=(pressing_var.get()==1))
+                        p=p, capacity=2, initial_count=0, pressing_up=pressing_list[pressing_var.get()])
 
 
 if __name__ == '__main__':
@@ -136,28 +133,34 @@ if __name__ == '__main__':
                height=canvas_height)
     canvas.pack(expand=YES, fill=BOTH)
 
-    express_var = IntVar()
-    pressing_var = IntVar()
+    schedule_var = StringVar(master)
+    pressing_var = StringVar(master)
 
     button0 = Button(master, text="Reset", fg='black',
                          command=reset_elevator)
     button0.pack(side=LEFT)
 
-    button = Checkbutton(master, text="Express Schedule", fg='black',
-                         command=scheduler_change, variable=express_var)
+    button = OptionMenu(master, schedule_var, *schedule_list)
+    button.config(width=20, font=('Helvetica', 12))
+    schedule_var.set(next(iter(schedule_list)))
+    schedule_var.trace("w", scheduler_change)
     button.pack(side=LEFT)
-    button2 = Checkbutton(master, text="Pressing ▲", fg='black',
-                         command=pressing_change, variable=pressing_var)
+
+    button2 = OptionMenu(master, pressing_var, *pressing_list)
+    button2.config(width=20, font=('Helvetica', 12))
+    pressing_var.set(next(iter(pressing_list)))
+    pressing_var.trace("w", pressing_change)
     button2.pack(side=LEFT)
+
     label1 = Label(master, text='  Busyness: ')
     label1.pack(side=LEFT)
-    scale1 = Scale(master, from_=0, to_=100, orient=HORIZONTAL, length=200,
+    scale1 = Scale(master, from_=0, to_=100, orient=HORIZONTAL, length=150,
                    command=p_change)
     scale1.set(40)
     scale1.pack(side=LEFT, expand=True)
     label2 = Label(master, text='  Simulation Speed: ')
     label2.pack(side=LEFT)
-    scale2 = Scale(master, from_=0, to_=100, orient=HORIZONTAL, length=200,
+    scale2 = Scale(master, from_=0, to_=100, orient=HORIZONTAL, length=150,
                    command=spped_change)
     scale2.pack(side=LEFT, expand=True)
     scale2.set(10)
