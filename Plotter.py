@@ -4,8 +4,10 @@ from Elevator import Elevator
 from Scheduler import ExpressScheduler, MinMaxScheduler, DynamicExpressScheduler
 from tqdm import tqdm
 import numpy as np
+from multiprocessing import Pool
 
 SIM_HOURS = 4
+pool = Pool()
 
 def simulate(elevator):
     for _ in range(SIM_HOURS * 3600):
@@ -29,9 +31,11 @@ def elevator_to_stat(stats, **elevator_args):
 def plot_metric(metric, units, name=None, log=False):
     if name is None:
         name = metric
+    plt.plot(y_dynamic_express["Total_Load"], y_dynamic_express[metric], label="Dynamic Express Scheduling")
     plt.plot(y_express["Total_Load"], y_express[metric], label="Express Scheduling")
     plt.plot(y_minmax["Total_Load"], y_minmax[metric], label="Normal Scheduling")
-    plt.plot(y_minmax_always["Total_Load"], y_minmax_always[metric], label="Normal Scheduling with Pressed up")
+    plt.plot(y_minmax_always["Total_Load"], y_minmax_always[metric], label="Normal Scheduling with always Pressed up")
+    plt.plot(y_minmax_full["Total_Load"], y_minmax_full[metric], label="Normal Scheduling with Pressed up when full")
     plt.legend()
     plt.title('%s vs Load' % name)
     plt.xlabel('Load(carts / 1hr)')
@@ -56,19 +60,21 @@ if __name__ == '__main__':
 
     for business in tqdm(range(101)):
         elevator_to_stat(y_dynamic_express, scheduler=DynamicExpressScheduler(),
-                         floors=7, p=business / 100 / 10, capacity=2, initial_count=0)
+                         floors=7, p=business / 1000, capacity=2, initial_count=0)
         elevator_to_stat(y_express, scheduler=ExpressScheduler(),
-                         floors=7, p=business / 100 / 10, capacity=2, initial_count=0)
+                         floors=7, p=business / 1000, capacity=2, initial_count=0)
         elevator_to_stat(y_minmax, scheduler=MinMaxScheduler(),
-                         floors=7, p=business / 100 / 10, capacity=2, initial_count=0)
+                         floors=7, p=business / 1000, capacity=2, initial_count=0)
         elevator_to_stat(y_minmax_always, scheduler=MinMaxScheduler(),
-                         floors=7, p=business / 100 / 10, capacity=2, initial_count=0, pressing_up='always')
+                         floors=7, p=business / 1000, capacity=2, initial_count=0, pressing_up='always')
         elevator_to_stat(y_minmax_full, scheduler=MinMaxScheduler(),
-                         floors=7, p=business / 100 / 10, capacity=2, initial_count=0, pressing_up='when_full')
+                         floors=7, p=business / 1000, capacity=2, initial_count=0, pressing_up='when_full')
 
+    pack_and_sort(y_dynamic_express)
     pack_and_sort(y_express)
     pack_and_sort(y_minmax)
     pack_and_sort(y_minmax_always)
+    pack_and_sort(y_minmax_full)
 
     plot_metric('Throughput', 'carts / hr')
     plot_metric('Longest_queue', 'carts', name='Longest Queue')
