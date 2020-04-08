@@ -22,7 +22,7 @@ def simulate(elevator):
 
 
 def elevator_to_stat(stats, **elevator_args):
-    for _ in range(1):
+    for _ in range(4):
         stat = simulate(Elevator(**elevator_args))
         for k in stats.keys():
             stats[k].append(stat[k])

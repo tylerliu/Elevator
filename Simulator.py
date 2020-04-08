@@ -152,7 +152,7 @@ if __name__ == '__main__':
     pressing_var.trace("w", pressing_change)
     button2.pack(side=LEFT)
 
-    label1 = Label(master, text='  Busyness: ')
+    label1 = Label(master, text='  Load: ')
     label1.pack(side=LEFT)
     scale1 = Scale(master, from_=0, to_=100, orient=HORIZONTAL, length=150,
                    command=p_change)

@@ -77,11 +77,13 @@ class DynamicExpressScheduler(Scheduler):
         self.next = 0
 
     def next_floor(self, up_requests, down_requests, full):
-        if self.current != 0 and full > 0.9:
+        if (self.current != 0 and full > 0.99) or (self.current == len(down_requests) - 1 and full > 0.01):
             self.current = 0
             return 0
         self.current = self.next + 1
         self.next = (self.next + 1) % (len(down_requests) - 1)
+        if full > 0.001 and self.current == 1:
+            self.current = 0
         return self.current
 
     def going_up(self):
