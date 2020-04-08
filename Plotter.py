@@ -83,8 +83,6 @@ if __name__ == '__main__':
                                   for business in range(101)] * NUM_REPEAT)
     y_minmax_always = to_stats(mma_list)
     print('minmax always done')
-    pool.close()
-    pool.join()
 
     mmf_list = pool.map(get_sets, [{'scheduler': MinMaxScheduler(),
                                    'floors': 7, 'p': business / 1000, 'capacity': 2, 'initial_count': 0,
@@ -92,6 +90,9 @@ if __name__ == '__main__':
                                    for business in range(101)] * NUM_REPEAT)
     y_minmax_full = to_stats(mmf_list)
     print('minmax full done')
+
+    pool.close()
+    pool.join()
 
     pack_and_sort(y_dynamic_express)
     pack_and_sort(y_express)

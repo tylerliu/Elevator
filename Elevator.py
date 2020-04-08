@@ -53,7 +53,7 @@ class ElevatorQueue():
             self.up_request[floor] = False
         else:
             self.down_request[floor] = False
-        if self.pressing_up == 'when_full' and full == True:
+        if self.pressing_up == 'when_full' and full == True and self.waits[floor].qsize() > 0:
             self.up_request[floor] = True
 
 class PassengerLogger():
