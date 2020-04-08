@@ -99,6 +99,6 @@ if __name__ == '__main__':
     pack_and_sort(y_minmax_always)
     pack_and_sort(y_minmax_full)
 
-    plot_metric('Throughput', 'carts / hr')
+    plot_metric('Throughput', 'carts / hour')
     plot_metric('Longest_queue', 'carts', name='Longest Queue')
-    plot_metric('Turnaround', 's', name='Turnaround Time', log=True)
+    plot_metric('Turnaround', 'minutes', name='Turnaround Time', log=True)
